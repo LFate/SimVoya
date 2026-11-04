@@ -2,12 +2,12 @@ import Foundation
 
 struct SimulatorService: Sendable {
     struct DeviceList: Decodable { let devices: [String: [Device]] }
-    struct Device: Decodable { let udid: String; let name: String; let state: String; let isAvailable: Bool? }
+    struct Device: Decodable { let udid: String; let name: String; let state: String; let isAvailable: Bool?; let dataPath: String? }
     static func parse(_ data: Data) throws -> [SimulatorDevice] {
         let list = try JSONDecoder().decode(DeviceList.self, from: data)
         return list.devices.flatMap { runtime, devices in
             devices.filter { $0.state == "Booted" && $0.isAvailable != false }.map {
-                SimulatorDevice(id: $0.udid, name: $0.name, runtime: runtime.replacingOccurrences(of: "com.apple.CoreSimulator.SimRuntime.", with: "").replacingOccurrences(of: "-", with: ".").replacingOccurrences(of: "iOS.", with: "iOS ").replacingOccurrences(of: "iPadOS.", with: "iPadOS "))
+                SimulatorDevice(id: $0.udid, name: $0.name, runtime: runtime.replacingOccurrences(of: "com.apple.CoreSimulator.SimRuntime.", with: "").replacingOccurrences(of: "-", with: ".").replacingOccurrences(of: "iOS.", with: "iOS ").replacingOccurrences(of: "iPadOS.", with: "iPadOS "), dataPath: $0.dataPath)
             }
         }.sorted { ($0.name, $0.id) < ($1.name, $1.id) }
     }

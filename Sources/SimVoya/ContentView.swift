@@ -5,13 +5,15 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @ObservedObject var model: AppModel
     @State private var targeted = false
+    @StateObject private var exportModel = ExportModel()
     @Environment(\.colorScheme) private var scheme
     private var accent: Color { scheme == .dark ? Color(red: 0.65, green: 0.70, blue: 0.99) : Color(red: 0.31, green: 0.27, blue: 0.90) }
     var body: some View {
         HStack(spacing: 0) {
             sidebar.frame(width: 228)
             Divider()
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
+                Picker("工作模式", selection: $model.workspace) { ForEach(WorkspaceMode.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented).frame(width: 180)
                 if let error = model.deviceError {
                     Spacer()
                     emptyState(icon: "exclamationmark.triangle", title: "无法读取模拟器", text: "请确认 Xcode 已安装，并且开发工具可用。")
@@ -23,6 +25,9 @@ struct ContentView: View {
                     emptyState(icon: "iphone.gen3", title: "先启动一台模拟器", text: "启动后会自动出现在这里。")
                     HStack { Spacer(); Button("打开模拟器") { model.openSimulator() }.buttonStyle(.borderedProminent); Spacer() }
                     Spacer()
+                } else if model.workspace == .exporting {
+                    if model.selected != nil { ExportView(device: model.selected, model: exportModel) }
+                    else { emptyState(icon: "cursorarrow.click", title: "选择目标设备", text: "从左侧选择一台运行中的模拟器。") }
                 } else {
                     header
                     if model.selected != nil || model.importing {
@@ -38,16 +43,17 @@ struct ContentView: View {
                     Text(notice).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
             }
-            .padding(28).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(24).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .tint(accent)
-        .frame(minWidth: 760, minHeight: 580)
+        .frame(minWidth: 940, minHeight: 680)
         .toolbar {
             ToolbarItemGroup {
                 Button { model.openSimulator() } label: { Label("打开模拟器", systemImage: "iphone.gen3") }
-                Button { Task { await model.refresh() } } label: { Label("刷新", systemImage: "arrow.clockwise") }.keyboardShortcut("r").disabled(model.refreshing)
+                Button { Task { await model.refresh(); if model.workspace == .exporting { exportModel.refresh() } } } label: { Label("刷新", systemImage: "arrow.clockwise") }.keyboardShortcut("r").disabled(model.refreshing)
             }
         }
+        .onChange(of: model.selectedID) { exportModel.setDevice(model.selected) }
         .task { while !Task.isCancelled { await model.refresh(); try? await Task.sleep(nanoseconds: 3_000_000_000) } }
     }
     private var sidebar: some View {

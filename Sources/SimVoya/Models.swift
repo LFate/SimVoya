@@ -5,6 +5,7 @@ struct SimulatorDevice: Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let runtime: String
+    var dataPath: String? = nil
 }
 enum ImportMode: String, CaseIterable, Identifiable, Sendable {
     case automatic = "自动", photos = "照片", files = "文件"

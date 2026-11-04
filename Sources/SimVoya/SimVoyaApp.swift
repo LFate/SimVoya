@@ -27,7 +27,7 @@ struct SimVoyaApp: App {
     @StateObject private var model = AppModel()
     var body: some Scene {
         Window("SimVoya", id: "main") { ContentView(model: model) }
-            .defaultSize(width: 900, height: 680)
+            .defaultSize(width: 1080, height: 760)
             .commands { CommandGroup(replacing: .newItem) { Button("选择文件…") { model.chooseFiles() }.keyboardShortcut("o").disabled(!model.canImport) } }
     }
 }

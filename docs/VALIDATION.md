@@ -37,3 +37,7 @@
 - 确认工具链 Xcode 27.2（27B52）。
 - 通过实际 App 文件选择入口导入自身图标 SimVoya-icon.png 及专门创建的 Welcome.txt；GUI 显示照片导入及文件存储复制完成。
 - 将主窗口与导入结果实际截图保存至 docs/screenshots，并用于 README。未将 Finder 实拖或 Files UI 刷新标记为本轮已验证。
+
+## 1.1.0 文件浏览与导出
+
+新增功能与分级验收结果见 [EXPORT_VALIDATION.md](EXPORT_VALIDATION.md)。旧版记录不替代新版导出验收。

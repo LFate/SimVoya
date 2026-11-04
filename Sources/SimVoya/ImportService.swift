@@ -90,16 +90,19 @@ struct ImportService: Sendable {
             if let enumerationError { throw enumerationError }
         }
     }
-    static func manifest(_ url: URL) throws -> [String: String] {
+    static func manifest(_ original: URL) throws -> [String: String] {
+        try rejectSymlink(original)
+        let url = original.resolvingSymlinksInPath().standardizedFileURL
         var result: [String: String] = [:]
         func entry(_ item: URL, key: String) throws {
+            try Task.checkCancellation()
             let values = try item.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
             try rejectSymlink(item)
             if values.isDirectory == true { result[key] = "directory" }
             else if values.isRegularFile == true {
                 let handle = try FileHandle(forReadingFrom: item); defer { try? handle.close() }
                 var digest = SHA256()
-                while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty { digest.update(data: data) }
+                while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty { try Task.checkCancellation(); digest.update(data: data) }
                 result[key] = digest.finalize().map { String(format: "%02x", $0) }.joined()
             } else { throw AppError("无法校验文件类型。") }
         }
@@ -107,7 +110,11 @@ struct ImportService: Sendable {
         if (try url.resourceValues(forKeys: [.isDirectoryKey])).isDirectory == true {
             var enumerationError: Error?
             guard let iterator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [], errorHandler: { _, error in enumerationError = error; return false }) else { throw AppError("无法校验目录。") }
-            for case let child as URL in iterator { try entry(child, key: String(child.path.dropFirst(url.path.count))) }
+            for case let child as URL in iterator {
+                try Task.checkCancellation()
+                let relative = child.standardizedFileURL.pathComponents.dropFirst(url.pathComponents.count).joined(separator: "/")
+                try entry(child, key: relative)
+            }
             if let enumerationError { throw enumerationError }
         }
         return result

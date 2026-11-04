@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 @MainActor final class AppModel: ObservableObject {
+    @Published var workspace: WorkspaceMode = .importing
     @Published var devices: [SimulatorDevice] = []
     @Published var selectedID: String?
     @Published var mode: ImportMode = .automatic
@@ -16,7 +17,7 @@ import AppKit
     @Published var summary = ""
     private var didLoad = false
     var selected: SimulatorDevice? { devices.first { $0.id == selectedID } }
-    var canImport: Bool { selected != nil && deviceError == nil && !importing }
+    var canImport: Bool { workspace == .importing && selected != nil && deviceError == nil && !importing }
     func refresh() async {
         guard !refreshing else { return }; refreshing = true; defer { refreshing = false }
         do {

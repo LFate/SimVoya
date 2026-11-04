@@ -3,12 +3,12 @@
 </p>
 
 <h1 align="center">SimVoya</h1>
-<p align="center">把图片和文件送进 Xcode 模拟器。<br>Send photos and files from your Mac to a running iOS Simulator.</p>
+<p align="center">在 Mac 与 Xcode 模拟器之间传递图片和文件。<br>Import files into iOS Simulators and export simulator files back to your Mac.</p>
 <p align="center">
   <a href="LICENSE">MIT License</a> · SwiftUI + AppKit · macOS
 </p>
 
-SimVoya 是一个轻量的原生 macOS 工具：选择正在运行的模拟器，拖入图片、视频、文件或文件夹，即可导入。无需账号、云同步或额外运行时。
+SimVoya 是一个轻量的原生 macOS 工具：向运行中的模拟器导入图片与文件，或浏览模拟器中的文件、App 数据和共享容器，将选中的文件或文件夹拖到 Finder 导出。无需账号、云同步或额外运行时。
 
 ## 为什么做这个项目？
 
@@ -30,6 +30,12 @@ SimVoya 是一个轻量的原生 macOS 工具：选择正在运行的模拟器�
 
 ![SimVoya 实际导入结果：图片进入照片，Welcome.txt 复制到文件存储](docs/screenshots/import-results.jpg)
 
+### 文件浏览与导出（1.1.0）
+
+![SimVoya 1.1.0 实际导出页面，显示文件夹、加密 ZIP 及文本文件](docs/screenshots/export-browser.jpg)
+
+导出页面截图来自真实模拟器的测试目录。按钮批量导出已实际验证；原生 file promise 的文件/目录 fulfillment 集成测试已通过，Finder 跨窗口鼠标实拖尚未完成验收。详见 [导出验证记录](docs/EXPORT_VALIDATION.md)。
+
 ### 主窗口与运行设备
 
 ![SimVoya 主窗口，自动列出正在运行的 iPhone 模拟器](docs/screenshots/main-window.jpg)
@@ -44,7 +50,10 @@ SimVoya 是一个轻量的原生 macOS 工具：选择正在运行的模拟器�
 - 支持普通文件和文件夹，保留文件夹结构；同名内容自动添加编号，不覆盖已有文件。
 - 逐项显示成功与失败，保留错误详情；批次绑定选定设备，不因设备列表变化而改投其他设备。
 - 普通文件复制后进行 SHA-256 内容校验；源文件不会被移动或删除。
-- 原生 SwiftUI + AppKit，无第三方包依赖；导入过程无需网络或 Apple ID。
+- 导出页以列表显示文件名称、类型、大小和修改时间，支持目录导航、多选、当前层搜索和隐藏文件开关。
+- 可浏览文件 App 本地存储、应用数据容器、共享容器以及模拟器 data 根中的可访问内容。
+- 文件、文件夹和加密压缩包通过 macOS file promise 拖到 Finder，复制后校验内容；保留导出按钮作为替代入口。
+- 原生 SwiftUI + AppKit，无第三方包依赖；本地传输无需网络或 Apple ID。
 
 ## 快速开始
 
@@ -89,13 +98,33 @@ open dist/SimVoya.app
 
 “已复制到文件存储”表示复制及内容校验通过，不等同于 Files UI 已刷新。如未显示，请重新打开模拟器的文件 App。失败项可以重新拖入重试。「清空」只清除本次会话记录，不删除磁盘内容。
 
+### 从模拟器导出到 Mac
+
+1. 在左侧选择运行中的模拟器，切换到「导出」。
+2. 选择文件来源，双击文件夹逐层进入；可打开隐藏文件显示。
+3. 选择一个或多个文件、文件夹或压缩包，直接拖到 Finder 文件夹或桌面；也可点击「导出所选…」选择 Mac 保存位置。
+4. 等待实际复制与校验完成，在结果区查看每项状态，并在 Finder 中显示导出的副本。模拟器原文件保留。
+
+| 来源 | 可浏览内容 |
+| --- | --- |
+| 文件 App 本地文件 | LocalStorage 的本地文件根，包含 SimVoya 以外的子目录 |
+| 应用数据 | 可发现的系统和用户 App 数据根，以及 Documents、Library、tmp 等下层目录 |
+| 共享容器 | 可发现的 App Group 数据目录 |
+| 设备数据 | 所选模拟器 data 根中的其他可访问目录（高级位置） |
+
+目录按层读取，搜索只过滤当前层。文件夹大小不递归计算；未知元信息不表示零字节。符号链接可以显示，但不能跟随或导出。未下载的云端文件或虚拟提供器内容不能保证可读取；设备 data 根也不等同于 simulator runtime 的全部系统卷。
+
+加密压缩包按原始字节复制，不解压、不询问密码。源内容正在变化时校验可能失败，请等待生成完成，或先停止相应 App 写入，再重试。SHA-256 校验不等同于文件系统一致性快照。
+
+Finder 拖出使用接收端给出的精确目标路径；如目标冲突且 Finder 未提供新名称，会安全失败而不会覆盖。按钮导出则自动生成编号副本。
+
 ## 实现与兼容限制
 
 - 设备发现与照片导入使用 `xcrun simctl`，每个批次使用明确的模拟器 UDID。
 - 普通文件精确发现 DocumentsApp 的 `group.com.apple.FileProvider.LocalStorage` 容器，以 `rsync` 复制并校验内容，最终放入 `File Provider Storage/SimVoya`。
 - 普通文件路径是来自 [Apple Developer Forums 的兼容性方案](https://developer.apple.com/forums/thread/846994)，**不是稳定的公开任意文件导入 API**。未来 runtime 布局变化时可能失效；无法发现存储目录时会明确报错。
 - 只支持运行中的模拟器，不支持真机；普通文件导入依赖 iOS / iPadOS 的文件 App，不保证其他平台适用。
-- 符号链接及包含符号链接的文件夹会被拒绝。
+- 导入或导出包含符号链接的文件夹时会被拒绝；导出浏览列表可显示链接信息。
 - 子进程使用参数数组，逐项串行执行并设置超时，不执行拼接的 shell 命令。
 - App 不启用 App Sandbox，以便调用 Xcode 工具和访问模拟器容器；无需管理员或辅助功能权限。
 - 本次仅验证了单台 Booted iPhone；多设备切换、批量视频等真实场景尚未完成全部验收。详见 [验证记录](docs/VALIDATION.md)。
@@ -125,10 +154,13 @@ dist/SimVoya.app/Contents/MacOS/SimVoya \
 swift -module-cache-path /tmp/simvoya-icon-module-cache scripts/render-icon.swift
 ```
 
-项目采用轻量分层：`ContentView` / `AppModel` 处理界面状态，`SimulatorService` 发现设备，`ImportService` 导入和校验，`ProcessRunner` 在后台执行命令。
+项目采用轻量分层：`ContentView` / `AppModel` 处理导入界面状态，`SimulatorService` 发现设备，`ImportService` 导入和校验；`ExportModel`、`FileBrowserService` 和 `ExportService` 管理文件浏览与导出，`ExportFileTable` 桥接原生 file promise，`ProcessRunner` 在后台执行命令。
 
 - [UI 设计](docs/UI_DESIGN.md)
 - [架构设计](docs/ARCHITECTURE.md)
+- [导出 UI 设计](docs/EXPORT_UI.md)
+- [导出架构](docs/EXPORT_ARCHITECTURE.md)
+- [导出验证](docs/EXPORT_VALIDATION.md)
 - [命名记录](docs/NAMING.md)
 - [验证记录](docs/VALIDATION.md)
 
