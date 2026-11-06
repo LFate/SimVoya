@@ -31,31 +31,26 @@ NSColor.white.setStroke()
 phone.lineWidth = 32
 phone.stroke()
 
-func stroke(_ points: [NSPoint], width: CGFloat, alpha: CGFloat = 1) {
+func stroke(_ points: [NSPoint], width: CGFloat, ink: NSColor = .white) {
     let path = NSBezierPath()
     path.lineWidth = width
     path.lineCapStyle = .round
     path.lineJoinStyle = .round
     path.move(to: points[0])
     for point in points.dropFirst() { path.line(to: point) }
-    color(255, 255, 255, alpha).setStroke()
+    ink.setStroke()
     path.stroke()
 }
-stroke([NSPoint(x: 461, y: 804), NSPoint(x: 563, y: 804)], width: 25, alpha: 0.8)
-stroke([NSPoint(x: 512, y: 689), NSPoint(x: 512, y: 409)], width: 46)
-stroke([NSPoint(x: 402, y: 515), NSPoint(x: 512, y: 405), NSPoint(x: 622, y: 515)], width: 46)
-let tray = NSBezierPath()
-tray.move(to: NSPoint(x: 406, y: 320))
-tray.line(to: NSPoint(x: 406, y: 293))
-tray.curve(to: NSPoint(x: 427, y: 272), controlPoint1: NSPoint(x: 406, y: 279), controlPoint2: NSPoint(x: 413, y: 272))
-tray.line(to: NSPoint(x: 597, y: 272))
-tray.curve(to: NSPoint(x: 618, y: 293), controlPoint1: NSPoint(x: 611, y: 272), controlPoint2: NSPoint(x: 618, y: 279))
-tray.line(to: NSPoint(x: 618, y: 320))
-tray.lineWidth = 29
-tray.lineCapStyle = .round
-tray.lineJoinStyle = .round
-color(255, 255, 255, 0.9).setStroke()
-tray.stroke()
+stroke([NSPoint(x: 461, y: 804), NSPoint(x: 563, y: 804)], width: 25,
+    ink: color(255, 255, 255, 0.8))
+
+stroke([NSPoint(x: 402, y: 598), NSPoint(x: 622, y: 598)], width: 42)
+stroke([NSPoint(x: 552, y: 668), NSPoint(x: 622, y: 598), NSPoint(x: 552, y: 528)], width: 42)
+
+let returnInk = color(189, 242, 255)
+stroke([NSPoint(x: 622, y: 418), NSPoint(x: 402, y: 418)], width: 42, ink: returnInk)
+stroke([NSPoint(x: 472, y: 488), NSPoint(x: 402, y: 418), NSPoint(x: 472, y: 348)],
+    width: 42, ink: returnInk)
 
 context.flushGraphics()
 NSGraphicsContext.restoreGraphicsState()

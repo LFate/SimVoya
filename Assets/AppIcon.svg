@@ -18,7 +18,7 @@
   <g filter="url(#shadow)">
     <rect x="300" y="174" width="424" height="676" rx="88" fill="url(#glass)" stroke="#FFFFFF" stroke-width="32"/>
     <path d="M461 220H563" stroke="#FFFFFF" stroke-width="25" stroke-linecap="round" opacity=".8"/>
-    <path d="M512 335V615M402 509L512 619L622 509" fill="none" stroke="#FFFFFF" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M406 704V731Q406 752 427 752H597Q618 752 618 731V704" fill="none" stroke="#FFFFFF" stroke-width="29" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+    <path d="M402 426H622M552 356L622 426L552 496" fill="none" stroke="#FFFFFF" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M622 606H402M472 536L402 606L472 676" fill="none" stroke="#BDF2FF" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

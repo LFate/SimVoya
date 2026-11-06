@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Assets/AppIcon.png" width="112" alt="SimVoya icon">
+  <img src="Assets/AppIcon.png" width="112" alt="SimVoya 图标，模拟器轮廓内有两支反向箭头，表示导入与导出">
 </p>
 
 <h1 align="center">SimVoya</h1>
@@ -11,6 +11,8 @@
 SimVoya 是一个轻量的原生 macOS 工具：向运行中的模拟器导入图片与文件，或浏览模拟器中的文件、App 数据和共享容器，将选中的文件或文件夹拖到 Finder 导出。无需账号、云同步或额外运行时。
 
 设备列表常驻左栏，可在同一窗口切换导入与导出。导入页显示目标设备、文件去向和最近导入结果，导出页通过路径导航和文件列表浏览模拟器目录。
+
+新版图标在模拟器轮廓内使用一白一浅蓝的反向箭头，表示 Mac 与模拟器之间的双向传输。
 
 ## 为什么做这个项目？
 
