@@ -45,11 +45,23 @@ struct ExportFileTable: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(model: model) }
     func makeNSView(context: Context) -> NSScrollView {
         let table = BrowserTableView()
-        table.allowsMultipleSelection = true; table.usesAlternatingRowBackgroundColors = true; table.rowHeight = 36
-        table.style = .inset; table.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
-        for (id, title, width) in [("name", "名称", 310.0), ("type", "类型", 105.0), ("size", "大小", 76.0), ("date", "修改时间", 130.0)] {
-            let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id)); column.title = title; column.width = width
-            column.minWidth = id == "name" ? 180 : 60; column.sortDescriptorPrototype = NSSortDescriptor(key: id, ascending: true)
+        table.allowsMultipleSelection = true
+        table.usesAlternatingRowBackgroundColors = false
+        table.rowHeight = 32
+        table.style = .inset
+        table.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
+        for (id, title, width, minimum) in [
+            ("name", "名称", 264.0, 180.0),
+            ("type", "类型", 96.0, 72.0),
+            ("size", "大小", 80.0, 72.0),
+            ("date", "修改时间", 160.0, 152.0)
+        ] {
+            let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
+            column.title = title
+            column.width = width
+            column.minWidth = minimum
+            column.resizingMask = id == "name" ? [.autoresizingMask, .userResizingMask] : [.userResizingMask]
+            column.sortDescriptorPrototype = NSSortDescriptor(key: id, ascending: true)
             table.addTableColumn(column)
         }
         table.delegate = context.coordinator; table.dataSource = context.coordinator
@@ -58,7 +70,7 @@ struct ExportFileTable: NSViewRepresentable {
         table.setDraggingSourceOperationMask(.copy, forLocal: false); table.setDraggingSourceOperationMask(.copy, forLocal: true)
         let menu = NSMenu(); let info = NSMenuItem(title: "查看信息", action: #selector(Coordinator.showInfo), keyEquivalent: ""); info.target = context.coordinator; menu.addItem(info); table.menu = menu
         context.coordinator.table = table
-        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true; scroll.documentView = table; scroll.borderType = .bezelBorder
+        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true; scroll.documentView = table; scroll.borderType = .noBorder
         return scroll
     }
     func updateNSView(_ view: NSScrollView, context: Context) {
@@ -78,10 +90,16 @@ struct ExportFileTable: NSViewRepresentable {
         var dragIDs: [UUID] = []
         init(model: ExportModel) { self.model = model }
         func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
+        func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+            TransferSelectionRow()
+        }
         func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
             let entry = rows[row], key = tableColumn?.identifier.rawValue ?? "name"
             let cell = NSTableCellView(); let text = NSTextField(labelWithString: ""); text.lineBreakMode = .byTruncatingMiddle
-            text.font = .systemFont(ofSize: key == "name" ? 12 : 11); text.textColor = entry.unavailableReason == nil ? .labelColor : .secondaryLabelColor
+            text.font = key == "size" || key == "date"
+                ? .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+                : .systemFont(ofSize: key == "name" ? 13 : 12)
+            text.textColor = key == "name" && entry.unavailableReason == nil ? .labelColor : .secondaryLabelColor
             switch key {
             case "name": text.stringValue = entry.name + (entry.subtitle.isEmpty ? "" : "  ·  " + entry.subtitle)
             case "type": text.stringValue = entry.unavailableReason == nil ? entry.typeDescription : "不可导出"
@@ -91,11 +109,12 @@ struct ExportFileTable: NSViewRepresentable {
             text.translatesAutoresizingMaskIntoConstraints = false; cell.addSubview(text); cell.textField = text
             if key == "name" {
                 let icon = NSImageView(); icon.image = NSImage(systemSymbolName: entry.isSymbolicLink ? "link" : entry.isDirectory ? "folder" : ["zip", "7z", "rar", "gz"].contains(entry.url?.pathExtension.lowercased() ?? "") ? "archivebox" : "doc", accessibilityDescription: nil)
+                icon.contentTintColor = .secondaryLabelColor
                 icon.translatesAutoresizingMaskIntoConstraints = false; cell.addSubview(icon); cell.imageView = icon
-                NSLayoutConstraint.activate([icon.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 5), icon.centerYAnchor.constraint(equalTo: cell.centerYAnchor), icon.widthAnchor.constraint(equalToConstant: 18), icon.heightAnchor.constraint(equalToConstant: 18), text.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 8)])
-            } else { text.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 5).isActive = true }
-            NSLayoutConstraint.activate([text.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -6), text.centerYAnchor.constraint(equalTo: cell.centerYAnchor)])
-            cell.toolTip = entry.name + "\n" + (entry.url?.path ?? entry.subtitle) + (entry.unavailableReason.map { "\n" + $0 } ?? "")
+                NSLayoutConstraint.activate([icon.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8), icon.centerYAnchor.constraint(equalTo: cell.centerYAnchor), icon.widthAnchor.constraint(equalToConstant: 18), icon.heightAnchor.constraint(equalToConstant: 18), text.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 8)])
+            } else { text.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8).isActive = true }
+            NSLayoutConstraint.activate([text.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8), text.centerYAnchor.constraint(equalTo: cell.centerYAnchor)])
+            cell.toolTip = entry.name + "\n" + entry.dateText + "\n" + (entry.url?.path ?? entry.subtitle) + (entry.unavailableReason.map { "\n" + $0 } ?? "")
             cell.setAccessibilityLabel("\(entry.name)，\(entry.typeDescription)，\(entry.sizeText)，\(entry.dateText)")
             return cell
         }
@@ -148,6 +167,26 @@ struct ExportFileTable: NSViewRepresentable {
         var onReturn: (() -> Void)?
         override func keyDown(with event: NSEvent) {
             if event.keyCode == 36 || event.keyCode == 76 { onReturn?() } else { super.keyDown(with: event) }
+        }
+    }
+}
+
+private final class TransferSelectionRow: NSTableRowView {
+    override var interiorBackgroundStyle: NSView.BackgroundStyle { .normal }
+
+    override func drawSelection(in dirtyRect: NSRect) {
+        guard selectionHighlightStyle != .none else { return }
+        let dark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let accent = NSColor(TransferAppearance.accent(for: dark ? .dark : .light))
+        let frame = bounds.insetBy(dx: 4, dy: 1)
+        let shape = NSBezierPath(roundedRect: frame, xRadius: 6, yRadius: 6)
+        let fill = isEmphasized ? accent.withAlphaComponent(dark ? 0.20 : 0.13) : NSColor.unemphasizedSelectedContentBackgroundColor
+        fill.setFill()
+        shape.fill()
+        if isEmphasized {
+            accent.withAlphaComponent(0.60).setStroke()
+            shape.lineWidth = 1
+            shape.stroke()
         }
     }
 }

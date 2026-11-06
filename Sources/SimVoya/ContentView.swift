@@ -7,13 +7,13 @@ struct ContentView: View {
     @State private var targeted = false
     @StateObject private var exportModel = ExportModel()
     @Environment(\.colorScheme) private var scheme
-    private var accent: Color { scheme == .dark ? Color(red: 0.65, green: 0.70, blue: 0.99) : Color(red: 0.31, green: 0.27, blue: 0.90) }
+    private var accent: Color { TransferAppearance.accent(for: scheme) }
     var body: some View {
         HStack(spacing: 0) {
-            sidebar.frame(width: 228)
+            sidebar.frame(width: 240)
             Divider()
             VStack(alignment: .leading, spacing: 16) {
-                Picker("工作模式", selection: $model.workspace) { ForEach(WorkspaceMode.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented).frame(width: 180)
+                Picker("工作模式", selection: $model.workspace) { ForEach(WorkspaceMode.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented).labelsHidden().frame(width: 160)
                 if let error = model.deviceError {
                     Spacer()
                     emptyState(icon: "exclamationmark.triangle", title: "无法读取模拟器", text: "请确认 Xcode 已安装，并且开发工具可用。")
@@ -43,7 +43,9 @@ struct ContentView: View {
                     Text(notice).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
             }
-            .padding(24).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color(nsColor: .windowBackgroundColor))
         }
         .tint(accent)
         .frame(minWidth: 940, minHeight: 680)
@@ -57,52 +59,94 @@ struct ContentView: View {
         .task { while !Task.isCancelled { await model.refresh(); try? await Task.sleep(nanoseconds: 3_000_000_000) } }
     }
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack { Text("正在运行").font(.system(size: 12, weight: .semibold)); Text("\(model.devices.count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary); Spacer(); if model.refreshing { ProgressView().controlSize(.mini) } }.padding(.horizontal, 16).padding(.top, 24)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("运行中的设备").font(.system(size: 12, weight: .medium))
+                Text(model.devices.count.formatted()).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                Spacer()
+                if model.refreshing { ProgressView().controlSize(.mini) }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 20)
+
             List(selection: $model.selectedID) {
                 ForEach(model.devices) { device in
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: device.name.lowercased().contains("ipad") ? "ipad" : "iphone.gen3").font(.system(size: 23, weight: .light)).frame(width: 26).padding(.top, 2)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(device.name).font(.system(size: 13, weight: .semibold)).lineLimit(2)
-                            Text(device.runtime).font(.caption).foregroundStyle(.secondary)
-                            Label("运行中", systemImage: "circle.fill").font(.system(size: 10)).foregroundStyle(.green)
+                    HStack(spacing: 8) {
+                        Image(systemName: device.name.lowercased().contains("ipad") ? "ipad" : "iphone.gen3")
+                            .font(.system(size: 16)).frame(width: 20)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(device.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                            Text(device.runtime).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                         }
-                    }.padding(.vertical, 8).tag(device.id).help("\(device.name) · \(device.runtime)\n\(device.id)")
+                        Spacer(minLength: 4)
+                        Circle().fill(Color(nsColor: .systemGreen)).frame(width: 6, height: 6)
+                            .accessibilityLabel("运行中")
+                    }
+                    .frame(minHeight: 36)
+                    .tag(device.id)
+                    .help("\(device.name) · \(device.runtime)\n\(device.id)")
                 }
-            }.listStyle(.sidebar)
-            if model.devices.isEmpty { Text("暂无运行中的设备").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 16) }
-            Spacer(minLength: 0)
-            Label("每 3 秒自动更新", systemImage: "arrow.triangle.2.circlepath").font(.system(size: 11)).foregroundStyle(.secondary).padding(16)
-        }.background(Color(nsColor: .underPageBackgroundColor))
+            }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+
+            if model.devices.isEmpty {
+                Text("暂无运行中的设备").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 16)
+            }
+
+            Label("设备列表自动刷新", systemImage: "arrow.clockwise")
+                .font(.caption).foregroundStyle(.secondary).padding(16)
+        }
+        .background(Color(nsColor: .underPageBackgroundColor))
     }
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("把文件送进模拟器").font(.system(size: 24, weight: .semibold))
-            HStack(spacing: 6) {
-                Text("目标设备").foregroundStyle(.secondary)
-                if let device = model.selected { Text(device.name).fontWeight(.medium).lineLimit(1); Text("· \(device.runtime)").foregroundStyle(.secondary).lineLimit(1) }
-                else { Text("尚未选择").foregroundStyle(.secondary) }
-            }.font(.system(size: 12))
+            Text("导入到模拟器").font(.system(size: 24, weight: .medium))
+            TransferRoute(device: model.selected, exporting: false)
         }
     }
     private var importArea: some View {
         VStack(alignment: .leading, spacing: 12) {
             Picker("导入位置", selection: $model.mode) { ForEach(ImportMode.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented).frame(width: 240).disabled(model.importing)
-            VStack(spacing: 14) {
+            HStack(spacing: 16) {
+                Image(systemName: "tray.and.arrow.down")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundStyle(accent)
+                    .frame(width: 44, height: 44)
+                    .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                    .accessibilityHidden(true)
+
                 if model.importing {
-                    ProgressView(value: Double(model.completed), total: Double(max(1, model.total))).frame(width: 200)
-                    Text("正在导入 \(min(model.completed + 1, model.total)) / \(model.total)").font(.system(size: 17, weight: .semibold))
-                    Text("到 \(model.batchDevice)").foregroundStyle(.secondary).font(.caption)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("正在导入 \(min(model.completed + 1, model.total)) / \(model.total)")
+                            .font(.system(size: 16, weight: .medium)).monospacedDigit()
+                        ProgressView(value: Double(model.completed), total: Double(max(1, model.total)))
+                            .frame(maxWidth: 240)
+                        Text("到 \(model.batchDevice)").foregroundStyle(.secondary).font(.caption)
+                    }
                 } else {
-                    Image(systemName: "tray.and.arrow.down").font(.system(size: 34, weight: .light)).foregroundStyle(accent)
-                    Text(targeted ? "松开以导入到 \(model.selected?.name ?? "模拟器")" : "拖入图片、视频或文件").font(.system(size: 17, weight: .semibold)).lineLimit(2).multilineTextAlignment(.center)
-                    Button("选择文件…") { model.chooseFiles() }.keyboardShortcut("o").disabled(!model.canImport)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(targeted ? "松开以导入到 \(model.selected?.name ?? "模拟器")" : "拖入图片、视频或文件")
+                            .font(.system(size: 16, weight: .medium)).lineLimit(2)
+                        Text("也可以从 Mac 选择文件").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 12)
+                    Button("选择文件…") { model.chooseFiles() }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut("o")
+                        .disabled(!model.canImport)
                 }
             }
-            .frame(maxWidth: .infinity).frame(height: 190)
-            .background(accent.opacity(targeted ? 0.10 : 0.035), in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(accent.opacity(targeted ? 0.9 : 0.30), style: StrokeStyle(lineWidth: targeted ? 2 : 1, dash: targeted ? [] : [6, 5])))
+            .padding(20)
+            .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
+            .background(targeted ? accent.opacity(0.12) : Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(targeted ? accent : Color.primary.opacity(0.14),
+                                  style: StrokeStyle(lineWidth: targeted ? 2 : 1, dash: targeted ? [] : [4, 4]))
+                    .allowsHitTesting(false)
+            }
             .dropDestination(for: URL.self) { urls, _ in
                 guard model.canImport, !urls.isEmpty else { return false }; model.startImport(urls); return true
             } isTargeted: { targeted = $0 && model.canImport }
@@ -121,7 +165,13 @@ struct ContentView: View {
                 Button("清空") { model.records.removeAll(); model.summary = "" }.buttonStyle(.plain).font(.caption).foregroundStyle(.secondary).disabled(model.importing || model.records.isEmpty)
             }
             if model.records.isEmpty {
-                VStack(spacing: 6) { Text("还没有导入记录").font(.system(size: 12)); Text("文件会保留在 Mac 上，不会被移动或删除。").font(.system(size: 11)) }.foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("暂无导入记录").font(.system(size: 13))
+                    Text("原始文件保留在 Mac 上").font(.caption)
+                }
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -149,6 +199,45 @@ struct ContentView: View {
         }.frame(maxHeight: .infinity)
     }
     private func emptyState(icon: String, title: String, text: String) -> some View {
-        VStack(spacing: 14) { Image(systemName: icon).font(.system(size: 42, weight: .ultraLight)).foregroundStyle(accent); Text(title).font(.title3.weight(.semibold)); Text(text).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center) }.frame(maxWidth: .infinity)
+        VStack(spacing: 12) { Image(systemName: icon).font(.system(size: 32, weight: .light)).foregroundStyle(accent); Text(title).font(.title3.weight(.semibold)); Text(text).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center) }.frame(maxWidth: .infinity)
+    }
+}
+
+enum TransferAppearance {
+    static func accent(for scheme: ColorScheme) -> Color {
+        scheme == .dark
+            ? Color(red: 0.69, green: 0.72, blue: 0.97)
+            : Color(red: 0.31, green: 0.30, blue: 0.65)
+    }
+}
+
+struct TransferRoute: View {
+    let device: SimulatorDevice?
+    let exporting: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            endpoint(isSimulator: exporting)
+            Image(systemName: "arrow.right")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.tint)
+                .accessibilityHidden(true)
+            endpoint(isSimulator: !exporting)
+        }
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(exporting ? "从\(device?.name ?? "模拟器")传到 Mac" : "从 Mac 传到\(device?.name ?? "模拟器")")
+    }
+
+    private func endpoint(isSimulator: Bool) -> some View {
+        Group {
+            if isSimulator {
+                Label(device.map { "\($0.name) · \($0.runtime)" } ?? "模拟器", systemImage: "iphone.gen3")
+            } else {
+                Label("Mac", systemImage: "laptopcomputer")
+            }
+        }
+        .lineLimit(1)
     }
 }
