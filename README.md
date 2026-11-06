@@ -26,23 +26,17 @@ SimVoya 是一个轻量的原生 macOS 工具：向运行中的模拟器导入�
 
 ## 实际效果
 
-以下为 2026-11-04 的中文界面实机截图。演示图片使用项目自身图标，文本为专门创建的示例文件。
+以下为 SimVoya 中文界面的运行截图，设备为 iPhone 18 Pro Max（iOS 27.2 Simulator）。
 
-### 导入图片与普通文件
+### 导入到模拟器
 
-![SimVoya 实际导入结果：图片进入照片，Welcome.txt 复制到文件存储](docs/screenshots/import-results.jpg)
+![SimVoya 导入页，显示运行中的模拟器、导入位置和文件拖放区](docs/screenshots/import-window.png)
 
-### 文件浏览与导出（1.1.0）
+### 从模拟器导出
 
-![SimVoya 1.1.0 实际导出页面，显示文件夹、加密 ZIP 及文本文件](docs/screenshots/export-browser.jpg)
+![SimVoya 导出页，显示文件 App 的本地文件列表和 SimVoya 文件夹](docs/screenshots/export-window.png)
 
-导出页面截图来自真实模拟器的测试目录。按钮批量导出已实际验证；原生 file promise 的文件/目录 fulfillment 集成测试已通过，Finder 跨窗口鼠标实拖尚未完成验收。详见 [导出验证记录](docs/EXPORT_VALIDATION.md)。
-
-### 主窗口与运行设备
-
-![SimVoya 主窗口，自动列出正在运行的 iPhone 模拟器](docs/screenshots/main-window.jpg)
-
-截图环境：Apple Silicon Mac、Xcode 27.2、iPhone 18 Pro Max / iOS 27.2 Simulator，2026-11-04。截图通过「选择文件」入口完成导入；Finder 跨窗口鼠标拖拽尚未完成自动化实拖验收。
+按钮批量导出已实际验证，原生文件承诺（file promise）的文件与目录复制已通过集成测试。Finder 跨窗口鼠标实拖尚未完成验收。详见 [导出验证记录](docs/EXPORT_VALIDATION.md)。
 
 ## 功能
 
